@@ -7,6 +7,4 @@ __pycache__/
 # Sistema
 .DS_Store
 
-# PDF do manual (ficheiro grande, não vai para o repo)
-*.pdf
-static/manual.pdf
+# static/manual.pdf é gerado automaticamente, não precisa de ir ao repo
