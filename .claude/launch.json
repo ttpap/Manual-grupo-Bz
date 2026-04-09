@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Chat do Manual (Flask)",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["/Users/pap/Downloads/claude cowork/Projetos_Codigo/Manual chat/app.py"],
+      "port": 5001,
+      "autoPort": true
+    }
+  ]
+}

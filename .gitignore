@@ -1,0 +1,12 @@
+# Ambiente e segredos
+.env
+__pycache__/
+*.pyc
+*.pyo
+
+# Sistema
+.DS_Store
+
+# PDF do manual (ficheiro grande, não vai para o repo)
+*.pdf
+static/manual.pdf

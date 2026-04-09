@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BZ · Chat do Manual</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --navy:  #060f36;
+      --blue:  #0d2b8e;
+      --mid:   #1565c0;
+      --cyan:  #00c6ff;
+      --white: #ffffff;
+      --glass: rgba(255,255,255,0.06);
+      --glass2:rgba(255,255,255,0.11);
+      --border:rgba(255,255,255,0.1);
+      --shadow:0 8px 32px rgba(0,0,0,0.4);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      font-family:'Inter',sans-serif;
+      background:var(--navy);
+      height:100vh;overflow:hidden;
+      display:flex;flex-direction:column;
+    }
+
+    /* ── CANVAS ── */
+    #bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+    /* ── HEADER ── */
+    header{
+      position:relative;z-index:2;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 28px;height:64px;flex-shrink:0;
+      background:rgba(6,15,54,0.8);
+      backdrop-filter:blur(24px);
+      border-bottom:1px solid rgba(0,198,255,0.12);
+      box-shadow:0 1px 0 rgba(0,198,255,0.05),0 4px 24px rgba(0,0,0,0.5);
+    }
+    header::before{
+      content:'';position:absolute;top:0;left:0;right:0;height:2px;
+      background:linear-gradient(90deg,transparent 0%,var(--cyan) 50%,transparent 100%);
+      opacity:0.5;
+    }
+    .header-left{display:flex;align-items:center;gap:14px;}
+    .logo-wrap img{
+      width:44px;height:44px;border-radius:50%;object-fit:cover;
+      border:2px solid rgba(0,198,255,0.55);
+      box-shadow:0 0 16px rgba(0,198,255,0.3);
+    }
+    .header-titles h1{font-size:1.05rem;font-weight:700;color:#fff;letter-spacing:.3px;}
+    .header-sub{font-size:.66rem;color:var(--cyan);opacity:.6;letter-spacing:2px;text-transform:uppercase;font-weight:500;}
+    .header-badge{
+      display:flex;align-items:center;gap:8px;
+      font-size:.78rem;color:rgba(255,255,255,.55);
+      background:rgba(0,198,255,0.06);
+      border:1px solid rgba(0,198,255,0.15);
+      padding:6px 14px;border-radius:999px;
+      max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .badge-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);
+      box-shadow:0 0 6px rgba(0,198,255,.7);flex-shrink:0;}
+
+    /* ── MAIN ── */
+    #main{
+      position:relative;z-index:1;
+      display:flex;flex:1;overflow:hidden;
+    }
+
+    /* ── CHAT PANEL ── */
+    #chat-panel{
+      display:flex;flex-direction:column;
+      width:45%;min-width:320px;
+      border-right:1px solid var(--border);
+    }
+    #messages{
+      flex:1;overflow-y:auto;
+      padding:16px 16px 8px;
+      display:flex;flex-direction:column;gap:12px;
+      scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.08) transparent;
+    }
+    #messages::-webkit-scrollbar{width:3px;}
+    #messages::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px;}
+
+    .msg{
+      max-width:82%;padding:11px 15px;border-radius:16px;
+      font-size:.9rem;line-height:1.55;word-wrap:break-word;
+      animation:fadeUp .2s ease;
+    }
+    @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .msg.user{
+      background:linear-gradient(135deg,var(--mid),#1e8fff);
+      color:#fff;align-self:flex-end;border-bottom-right-radius:4px;
+      box-shadow:0 3px 14px rgba(21,101,192,.35);
+    }
+    .msg.bot{
+      background:var(--glass2);backdrop-filter:blur(10px);
+      border:1px solid var(--border);color:rgba(255,255,255,.9);
+      align-self:flex-start;border-bottom-left-radius:4px;
+    }
+    .msg.bot .msg-content{margin-bottom:8px;}
+    .btn-ouvir{
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+      border-radius:12px;padding:4px 10px;font-size:.74rem;
+      cursor:pointer;color:rgba(255,255,255,.55);
+      display:inline-flex;align-items:center;gap:4px;
+      transition:all .2s;font-family:inherit;
+    }
+    .btn-ouvir:hover{background:rgba(255,255,255,.1);color:#fff;}
+    .btn-ouvir.falando{background:rgba(0,198,255,.12);border-color:var(--cyan);color:var(--cyan);}
+
+    .typing{display:flex;gap:5px;align-items:center;padding:12px 16px;}
+    .typing span{width:7px;height:7px;background:var(--cyan);border-radius:50%;
+      animation:bounce 1.2s infinite;opacity:.7;}
+    .typing span:nth-child(2){animation-delay:.2s;}
+    .typing span:nth-child(3){animation-delay:.4s;}
+    @keyframes bounce{0%,80%,100%{transform:scale(.75);opacity:.4}40%{transform:scale(1.1);opacity:1}}
+
+    /* ── INPUT ── */
+    #input-area{
+      padding:10px 12px 14px;
+      background:rgba(6,15,54,.6);
+      backdrop-filter:blur(16px);
+      border-top:1px solid var(--border);
+      display:flex;align-items:flex-end;gap:8px;
+    }
+    #pergunta-input{
+      flex:1;background:var(--glass);
+      border:1px solid var(--border);border-radius:20px;
+      padding:10px 16px;font-size:.9rem;color:#fff;
+      outline:none;resize:none;max-height:100px;
+      font-family:inherit;line-height:1.5;
+      transition:border-color .2s,box-shadow .2s;
+    }
+    #pergunta-input::placeholder{color:rgba(255,255,255,.28);}
+    #pergunta-input:focus{border-color:rgba(0,198,255,.4);box-shadow:0 0 0 3px rgba(0,198,255,.08);}
+    .btn-round{
+      width:40px;height:40px;border-radius:50%;border:none;
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;flex-shrink:0;font-size:1rem;transition:all .2s;
+    }
+    #btn-mic{background:var(--glass);border:1px solid var(--border);color:rgba(255,255,255,.65);}
+    #btn-mic:hover{background:var(--glass2);color:#fff;}
+    #btn-mic.gravando{background:rgba(255,80,80,.2);border-color:#ff5050;color:#ff5050;
+      animation:pulsar 1s infinite;}
+    @keyframes pulsar{0%,100%{box-shadow:0 0 0 0 rgba(255,80,80,.3)}50%{box-shadow:0 0 0 8px rgba(255,80,80,0)}}
+    #btn-enviar{
+      background:linear-gradient(135deg,var(--mid),var(--cyan));color:#fff;
+      box-shadow:0 3px 12px rgba(0,198,255,.25);
+    }
+    #btn-enviar:hover{opacity:.9;transform:scale(1.05);}
+    #btn-enviar:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none;}
+
+    /* ── PDF PANEL ── */
+    #pdf-panel{
+      flex:1;display:flex;flex-direction:column;overflow:hidden;
+      background:rgba(4,10,40,.5);
+    }
+    #pdf-toolbar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 16px;
+      background:rgba(6,15,54,.7);border-bottom:1px solid var(--border);
+      flex-shrink:0;gap:12px;
+    }
+    #pdf-toolbar-title{font-size:.78rem;color:rgba(255,255,255,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .nav-btns{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    .nav-btn{
+      background:var(--glass);border:1px solid var(--border);
+      color:rgba(255,255,255,.7);border-radius:8px;
+      padding:5px 12px;font-size:.8rem;cursor:pointer;
+      font-family:inherit;transition:all .2s;
+    }
+    .nav-btn:hover{background:var(--glass2);color:#fff;}
+    .nav-btn:disabled{opacity:.25;cursor:not-allowed;}
+    #pagina-info{font-size:.78rem;color:rgba(255,255,255,.45);white-space:nowrap;}
+
+    #pdf-container{
+      flex:1;overflow-y:auto;overflow-x:hidden;
+      display:flex;flex-direction:column;align-items:center;
+      padding:20px 16px;gap:0;
+      scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.08) transparent;
+    }
+    #pdf-container::-webkit-scrollbar{width:3px;}
+    #pdf-container::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px;}
+
+    #pdf-placeholder{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      height:100%;gap:16px;color:rgba(255,255,255,.2);text-align:center;padding:32px;
+    }
+    #pdf-placeholder .icon{font-size:3.5rem;opacity:.3;}
+    #pdf-placeholder p{font-size:.88rem;line-height:1.6;}
+
+    .page-wrapper{
+      position:relative;margin-bottom:20px;
+      box-shadow:0 4px 24px rgba(0,0,0,.5);border-radius:6px;overflow:hidden;
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .page-label{
+      position:absolute;top:8px;left:8px;z-index:3;
+      background:rgba(0,198,255,.85);color:#fff;
+      font-size:.7rem;font-weight:700;letter-spacing:.5px;
+      padding:3px 9px;border-radius:10px;
+      box-shadow:0 2px 8px rgba(0,0,0,.4);
+    }
+    canvas.page-canvas{display:block;border-radius:6px;}
+    canvas.hl-canvas{
+      position:absolute;top:0;left:0;
+      pointer-events:none;border-radius:6px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:700px){
+      #chat-panel{width:100%;border-right:none;border-bottom:1px solid var(--border);}
+      #main{flex-direction:column;}
+      #pdf-panel{min-height:260px;}
+    }
+  </style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+
+<header>
+  <div class="header-left">
+    <div class="logo-wrap"><img src="/static/logo.jpeg" alt="BZ"/></div>
+    <div class="header-titles">
+      <h1>Chat do Manual</h1>
+      <span class="header-sub">Assistente de documentos</span>
+    </div>
+  </div>
+  <div class="header-badge">
+    <span class="badge-dot"></span>
+    <span>{{ manual_nome }}</span>
+  </div>
+</header>
+
+<div id="main">
+  <!-- CHAT -->
+  <div id="chat-panel">
+    <div id="messages"></div>
+    <div id="input-area">
+      <textarea id="pergunta-input" placeholder="Escreve a tua pergunta..." rows="1"
+        onkeydown="verificarEnter(event)" oninput="autoResize(this)"></textarea>
+      <button class="btn-round" id="btn-mic" title="Falar" onclick="alternarMic()">🎤</button>
+      <button class="btn-round" id="btn-enviar" title="Enviar" onclick="enviar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- PDF VIEWER -->
+  <div id="pdf-panel">
+    <div id="pdf-toolbar">
+      <span id="pdf-toolbar-title">Visualizador do manual</span>
+      <div class="nav-btns">
+        <button class="nav-btn" id="btn-prev" onclick="navPagina(-1)" disabled>‹ Anterior</button>
+        <span id="pagina-info">—</span>
+        <button class="nav-btn" id="btn-next" onclick="navPagina(1)" disabled>Próxima ›</button>
+      </div>
+    </div>
+    <div id="pdf-container">
+      <div id="pdf-placeholder">
+        <div class="icon">📑</div>
+        <p>Faz uma pergunta ao chat<br/>e as páginas relevantes<br/>aparecerão aqui com destaque.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── CANVAS BACKGROUND ────────────────────────────────────────
+(function(){
+  const cv = document.getElementById('bg-canvas');
+  const cx = cv.getContext('2d');
+  let W,H,pts=[];
+  function resize(){ W=cv.width=innerWidth; H=cv.height=innerHeight; }
+  function Pt(){ this.x=Math.random()*W; this.y=Math.random()*H;
+    this.vx=(Math.random()-.5)*.25; this.vy=(Math.random()-.5)*.25;
+    this.a=Math.random()*.45+.08; }
+  function init(){ resize(); pts=Array.from({length:80},()=>new Pt()); }
+  function draw(){
+    cx.clearRect(0,0,W,H);
+    const g=cx.createRadialGradient(W*.3,H*.2,0,W*.5,H*.5,W*.85);
+    g.addColorStop(0,'rgba(0,90,220,.15)'); g.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=g; cx.fillRect(0,0,W,H);
+    pts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0;
+      if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      cx.beginPath(); cx.arc(p.x,p.y,1.2,0,Math.PI*2);
+      cx.fillStyle=`rgba(0,198,255,${p.a})`; cx.fill();
+    });
+    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+      const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+      if(d<90){ cx.beginPath(); cx.moveTo(pts[i].x,pts[i].y);
+        cx.lineTo(pts[j].x,pts[j].y);
+        cx.strokeStyle=`rgba(0,198,255,${.06*(1-d/90)})`; cx.lineWidth=.5; cx.stroke(); }
+    }
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize); init(); draw();
+})();
+
+// ── ESTADO PDF ───────────────────────────────────────────────
+let pdfDoc = null;
+let paginasResultado = [];  // páginas vindas da última resposta
+let idxAtual = 0;           // índice em paginasResultado
+let palavrasBusca = [];
+
+// Carrega o PDF.js doc
+pdfjsLib.getDocument('/manual.pdf').promise.then(doc => {
+  pdfDoc = doc;
+  adicionarMsgBot(`Olá! 👋 O manual está carregado e pronto.<br/>Podes fazer qualquer pergunta sobre <strong>{{ manual_nome }}</strong>.`);
+}).catch(()=>{
+  adicionarMsgBot('⚠️ Não foi possível carregar o PDF para visualização.');
+});
+
+// ── RENDER PÁGINA COM DESTAQUE ───────────────────────────────
+async function renderPagina(numPagina, palavras) {
+  if (!pdfDoc) return;
+  const container = document.getElementById('pdf-container');
+  container.innerHTML = '';
+
+  const page = await pdfDoc.getPage(numPagina);
+  const containerW = container.clientWidth - 32;
+  const baseVP = page.getViewport({scale: 1});
+  const scale = Math.max(containerW / baseVP.width, 1.0);
+  const vp = page.getViewport({scale});
+
+  const wrap = document.createElement('div');
+  wrap.className = 'page-wrapper';
+  wrap.style.width = vp.width + 'px';
+
+  const label = document.createElement('div');
+  label.className = 'page-label';
+  label.textContent = `Página ${numPagina}`;
+
+  const canvas = document.createElement('canvas');
+  canvas.className = 'page-canvas';
+  canvas.width = vp.width;
+  canvas.height = vp.height;
+
+  const hlCanvas = document.createElement('canvas');
+  hlCanvas.className = 'hl-canvas';
+  hlCanvas.width = vp.width;
+  hlCanvas.height = vp.height;
+  hlCanvas.style.width = vp.width + 'px';
+  hlCanvas.style.height = vp.height + 'px';
+
+  wrap.appendChild(label);
+  wrap.appendChild(canvas);
+  wrap.appendChild(hlCanvas);
+  container.appendChild(wrap);
+
+  // Renderiza a página
+  await page.render({canvasContext: canvas.getContext('2d'), viewport: vp}).promise;
+
+  // Destaque
+  if (palavras && palavras.length) {
+    const tc = await page.getTextContent();
+    const ctx = hlCanvas.getContext('2d');
+    ctx.fillStyle = 'rgba(255, 210, 0, 0.38)';
+
+    for (const item of tc.items) {
+      if (!item.str || !item.str.trim()) continue;
+      const lower = item.str.toLowerCase();
+      const match = palavras.some(w => w.length > 2 && lower.includes(w.toLowerCase()));
+      if (match) {
+        const tx = pdfjsLib.Util.transform(vp.transform, item.transform);
+        const fontH = Math.abs(item.transform[3]) * scale;
+        const fontW = item.width * scale;
+        ctx.fillRect(tx[4], tx[5] - fontH * 1.05, fontW, fontH * 1.3);
+      }
+    }
+  }
+}
+
+// ── NAVEGAÇÃO ────────────────────────────────────────────────
+function navPagina(dir) {
+  const novo = idxAtual + dir;
+  if (novo < 0 || novo >= paginasResultado.length) return;
+  idxAtual = novo;
+  atualizarNav();
+  renderPagina(paginasResultado[idxAtual], palavrasBusca);
+}
+
+function atualizarNav() {
+  document.getElementById('pagina-info').textContent =
+    paginasResultado.length ? `${idxAtual + 1} / ${paginasResultado.length} páginas` : '—';
+  document.getElementById('btn-prev').disabled = idxAtual <= 0;
+  document.getElementById('btn-next').disabled = idxAtual >= paginasResultado.length - 1;
+  document.getElementById('pdf-toolbar-title').textContent =
+    paginasResultado.length ? `Página ${paginasResultado[idxAtual]} do manual` : 'Visualizador do manual';
+}
+
+function mostrarPaginas(paginas, palavras) {
+  if (!paginas || !paginas.length) return;
+  paginasResultado = paginas;
+  palavrasBusca = palavras || [];
+  idxAtual = 0;
+  atualizarNav();
+  renderPagina(paginasResultado[0], palavrasBusca);
+}
+
+// ── CHAT ─────────────────────────────────────────────────────
+function adicionarMsgUser(txt) {
+  const msgs = document.getElementById('messages');
+  const d = document.createElement('div');
+  d.className = 'msg user';
+  d.textContent = txt;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function adicionarMsgBot(html) {
+  const msgs = document.getElementById('messages');
+  const d = document.createElement('div');
+  d.className = 'msg bot';
+  const c = document.createElement('div');
+  c.className = 'msg-content';
+  c.innerHTML = html;
+  const plain = c.textContent;
+  const btn = document.createElement('button');
+  btn.className = 'btn-ouvir';
+  btn.innerHTML = '🔊 Ouvir';
+  btn.onclick = () => ouvir(plain, btn);
+  d.appendChild(c); d.appendChild(btn);
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function mostrarTyping() {
+  const msgs = document.getElementById('messages');
+  const d = document.createElement('div');
+  d.className = 'msg bot typing'; d.id = 'typing';
+  d.innerHTML = '<span></span><span></span><span></span>';
+  msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight;
+}
+function removerTyping(){ const el=document.getElementById('typing'); if(el)el.remove(); }
+
+async function enviar() {
+  const inp = document.getElementById('pergunta-input');
+  const q = inp.value.trim();
+  if (!q) return;
+  inp.value = ''; autoResize(inp);
+  adicionarMsgUser(q);
+  document.getElementById('btn-enviar').disabled = true;
+  mostrarTyping();
+
+  try {
+    const res = await fetch('/perguntar', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pergunta: q})
+    });
+    const data = await res.json();
+    removerTyping();
+    const html = data.resposta
+      ? data.resposta.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      : `<em style="opacity:.5">Erro: ${data.erro}</em>`;
+    adicionarMsgBot(html);
+
+    if (data.paginas && data.paginas.length) {
+      mostrarPaginas(data.paginas, data.palavras_busca);
+    }
+  } catch {
+    removerTyping();
+    adicionarMsgBot('<em style="opacity:.5">Erro de conexão.</em>');
+  }
+  document.getElementById('btn-enviar').disabled = false;
+}
+
+function verificarEnter(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviar();} }
+function autoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+
+// ── MICROFONE ────────────────────────────────────────────────
+let rec=null, gravando=false;
+function alternarMic(){
+  const btn=document.getElementById('btn-mic');
+  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
+    alert('Usa o Chrome para reconhecimento de voz.'); return; }
+  if(gravando){rec.stop();return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  rec=new SR(); rec.lang='pt-BR'; rec.interimResults=true;
+  rec.onstart=()=>{gravando=true;btn.classList.add('gravando');btn.textContent='⏹️';};
+  rec.onend=()=>{gravando=false;btn.classList.remove('gravando');btn.textContent='🎤';};
+  rec.onresult=e=>{
+    const t=Array.from(e.results).map(r=>r[0].transcript).join('');
+    document.getElementById('pergunta-input').value=t;
+    autoResize(document.getElementById('pergunta-input'));
+    if(e.results[e.results.length-1].isFinal) setTimeout(enviar,500);
+  };
+  rec.start();
+}
+
+// ── TEXT-TO-SPEECH ───────────────────────────────────────────
+let vozAtual=null;
+function ouvir(txt,btn){
+  if(vozAtual){ speechSynthesis.cancel();
+    if(btn.classList.contains('falando')){btn.classList.remove('falando');btn.innerHTML='🔊 Ouvir';vozAtual=null;return;} }
+  document.querySelectorAll('.btn-ouvir.falando').forEach(b=>{b.classList.remove('falando');b.innerHTML='🔊 Ouvir';});
+  const u=new SpeechSynthesisUtterance(txt); u.lang='pt-BR'; u.rate=0.95;
+  const voz=speechSynthesis.getVoices().find(v=>v.lang.startsWith('pt'));
+  if(voz) u.voice=voz;
+  u.onstart=()=>{btn.classList.add('falando');btn.innerHTML='⏹️ Parar';vozAtual=btn;};
+  u.onend=u.onerror=()=>{btn.classList.remove('falando');btn.innerHTML='🔊 Ouvir';vozAtual=null;};
+  speechSynthesis.speak(u);
+}
+if(speechSynthesis.onvoiceschanged!==undefined)
+  speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();
+</script>
+</body>
+</html>
