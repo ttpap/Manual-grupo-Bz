@@ -10,11 +10,22 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-# ── Localiza o PDF automaticamente na pasta ──────────────────
+# ── Localiza o PDF (procura em várias localizações) ──────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-pdf_files = glob.glob(os.path.join(BASE_DIR, "*.pdf"))
-MANUAL_PATH = pdf_files[0] if pdf_files else None
+
+def encontrar_pdf():
+    # 1. static/manual.pdf (preferência em produção)
+    static_pdf = os.path.join(BASE_DIR, "static", "manual.pdf")
+    if os.path.exists(static_pdf):
+        return static_pdf
+    # 2. Qualquer PDF na raiz do projeto
+    pdfs = glob.glob(os.path.join(BASE_DIR, "*.pdf"))
+    return pdfs[0] if pdfs else None
+
+MANUAL_PATH = encontrar_pdf()
 MANUAL_NOME = os.path.splitext(os.path.basename(MANUAL_PATH))[0] if MANUAL_PATH else "Manual"
+# Remove sufixos do nome para exibição
+MANUAL_NOME = re.sub(r'\s*-\s*Finalizado.*$', '', MANUAL_NOME).strip()
 
 # ── Carrega chunks com número de página ─────────────────────
 def load_chunks():
