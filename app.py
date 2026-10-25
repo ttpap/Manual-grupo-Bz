@@ -1,7 +1,6 @@
 import os
 import re
 import glob
-import time
 import urllib.request
 import urllib.error
 from flask import Flask, request, jsonify, render_template, send_file, Response
@@ -157,12 +156,9 @@ def eleicao():
 def proxy_tse(caminho):
     if not TSE_PERMITIDOS.match(caminho):
         return jsonify({"erro": "Caminho não permitido"}), 400
-    # Parâmetro e cabeçalhos anti-cache: sem eles a CDN do TSE devolvia cópias antigas
-    req = urllib.request.Request(f"{TSE_BASE}{caminho}?t={int(time.time())}", headers={
+    req = urllib.request.Request(TSE_BASE + caminho, headers={
         "User-Agent": "Mozilla/5.0 (apuracao-buzios)",
         "Accept": "application/json",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
     })
     try:
         with urllib.request.urlopen(req, timeout=8) as resp:
