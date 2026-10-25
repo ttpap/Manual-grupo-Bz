@@ -211,7 +211,8 @@ function parse(json) {
     cands[k] = {
       nome: c.nmu || c.nm, partido: par.sg || "", n: String(c.n || ""), sq: String(c.sqcand || ""),
       vap: num(c.vap), pvap: pnum(c.pvap),
-      eleito: /eleito/i.test(String(c.st || "")) && !/n[aã]o eleito/i.test(String(c.st || "")) || c.e === "s",
+      // st = "Eleito" só no vencedor; "e" também marca quem foi ao 2º turno, então não serve.
+      eleito: /^eleito$/i.test(String(c.st || "").trim()),
     };
   }
   const s = json.s || {}, v = json.v || {}, e = json.e || {};
