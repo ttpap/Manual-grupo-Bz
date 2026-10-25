@@ -162,11 +162,11 @@ footer a{color:var(--tx2)}
   <div style="height:16px"></div>
 
   <section class="card">
-    <h2>Mapa da apuração por estado <span class="tag" id="hMap">—</span></h2>
-    <div class="sub">Onde a contagem já terminou, onde está andando e onde ainda não começou. Toque ou passe o mouse num estado para ver os números. O ponto amarelo é Armação dos Búzios.</div>
+    <h2>Mapa por estado <span class="tag" id="hMap">—</span></h2>
+    <div class="sub">Vermelho onde Lula está na frente, azul onde Flávio Bolsonaro está na frente; na outra aba, onde a contagem terminou, anda ou não começou. Toque ou passe o mouse num estado para ver os números. O ponto amarelo é Armação dos Búzios.</div>
     <div class="tabs" id="mapTabs">
-      <button data-k="pst" class="on">Andamento da apuração</button>
-      <button data-k="lead">Quem lidera</button>
+      <button data-k="lead" class="on">Quem está na frente</button>
+      <button data-k="pst">Andamento da apuração</button>
     </div>
     <div class="mapgrid">
       <div class="mapbox">
@@ -464,7 +464,7 @@ const MAP = window.BR_UFS;
 const UFS = MAP ? Object.keys(MAP.ufs) : [];
 const SMALL = new Set(["df", "se", "al", "pb", "rn", "pe", "es", "rj"]);
 const states = {};       // uf -> último parse do 2º turno
-let mapMode = "pst", selUF = null;
+let mapMode = "lead", selUF = null;
 
 function mix(a, b, t) {
   const h = (s) => [1, 3, 5].map((i) => parseInt(s.slice(i, i + 2), 16));
@@ -476,8 +476,9 @@ function ufColor(d) {
   if (mapMode === "pst") return d.pst >= 100 ? "#16a34a" : mix("#334155", "#4ade80", Math.max(.08, d.pst / 100));
   const L = d.cands.lula, F = d.cands.flavio;
   if (!L || !F) return "#334155";
-  const m = L.pvap - F.pvap, t = Math.min(1, Math.abs(m) / 30);
-  return m === 0 ? "#64748b" : m > 0 ? mix("#3f2a2e", "#ef4444", .25 + .75 * t) : mix("#26304a", "#3b82f6", .25 + .75 * t);
+  // Cor sólida de quem está na frente: Lula vermelho, Flávio azul, empate cinza
+  const m = L.pvap - F.pvap;
+  return m === 0 ? "#64748b" : m > 0 ? "#ef4444" : "#3b82f6";
 }
 function buildMap() {
   if (!MAP) { $("map").outerHTML = '<p class="note">Não foi possível carregar o desenho do mapa.</p>'; return; }
@@ -527,13 +528,19 @@ function renderMap() {
   document.querySelectorAll("#map path").forEach((p) => p.setAttribute("fill", ufColor(states[p.dataset.uf])));
   document.querySelectorAll("#map text[data-pst]").forEach((t) => {
     const d = states[t.dataset.pst];
-    t.textContent = d && d.pst != null ? (d.pst >= 100 ? "✓ 100%" : fmtP(d.pst, 0)) : "—";
+    if (!d || d.pst == null) { t.textContent = "—"; return; }
+    if (mapMode === "lead") {
+      const L = d.cands.lula, F = d.cands.flavio;
+      t.textContent = d.pst > 0 && L && F ? fmtP(Math.max(L.pvap, F.pvap), 0) : "sem urnas";
+      return;
+    }
+    t.textContent = d.pst >= 100 ? "✓ 100%" : fmtP(d.pst, 0);
   });
   $("legend").innerHTML = mapMode === "pst"
     ? `<span>0%</span><span class="ramp" style="background:linear-gradient(90deg,#334155,#4ade80)"></span><span>99%</span>
        <span><i style="background:#16a34a"></i>100% (terminou)</span><span><i style="background:#1f2937"></i>nenhuma urna</span>`
-    : `<span><i style="background:#ef4444"></i>Lula à frente</span><span><i style="background:#3b82f6"></i>Flávio à frente</span>
-       <span>cor mais forte = vantagem maior</span><span><i style="background:#1f2937"></i>nenhuma urna</span>`;
+    : `<span><i style="background:#ef4444"></i>Lula à frente</span><span><i style="background:#3b82f6"></i>Flávio Bolsonaro à frente</span>
+       <span><i style="background:#64748b"></i>empate</span><span>número no estado = % de quem lidera</span><span><i style="background:#1f2937"></i>nenhuma urna</span>`;
   const list = UFS.map((uf) => ({ uf, d: states[uf] })).sort((a, b) => ((b.d && b.d.pst) || 0) - ((a.d && a.d.pst) || 0) || a.uf.localeCompare(b.uf));
   let done = 0, run = 0, zero = 0;
   $("rank").innerHTML = list.map(({ uf, d }) => {
