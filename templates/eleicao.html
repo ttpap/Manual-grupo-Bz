@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="/static/chart.umd.min.js"></script>
+<script src="/static/brasil-ufs.js"></script>
 <script>window.Chart || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>')</script>
 <style>
 :root{
@@ -90,6 +91,37 @@ header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:s
 .up{color:#86efac}.down{color:#fca5a5}
 .hidden{display:none!important}
 .note{color:var(--tx3);font-size:12px;line-height:1.5;margin-top:12px}
+.mapgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.mapgrid{grid-template-columns:1fr}}
+.mapbox{position:relative}
+#map{width:100%;height:auto;display:block}
+#map path{stroke:#0b0f17;stroke-width:.8;cursor:pointer;transition:fill .6s ease}
+#map path:hover,#map path.sel{stroke:#fff;stroke-width:1.6}
+#map text{pointer-events:none;fill:#fff;font-family:Inter,sans-serif;font-weight:700;paint-order:stroke;stroke:rgba(0,0,0,.55);stroke-width:2.5px}
+#map text.p{font-weight:600;fill:#e8edf5}
+#map .bz circle{fill:#fbbf24;stroke:#0b0f17;stroke-width:1.5}
+#map .bz .ring{fill:none;stroke:#fbbf24;stroke-width:1.5;animation:ring 2s infinite;transform-origin:center;transform-box:fill-box}
+@keyframes ring{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(3.2)}}
+.tip{position:absolute;pointer-events:none;background:rgba(17,24,39,.96);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.5;min-width:180px;opacity:0;transition:opacity .15s;z-index:3;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.tip.show{opacity:1}
+.tip b{font-size:13px}
+.legend{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;color:var(--tx2);font-size:12px}
+.legend .ramp{height:10px;width:160px;border-radius:99px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.counts div{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.counts b{display:block;font-size:22px;font-weight:800}
+.counts small{color:var(--tx3);font-size:11px}
+.rank{list-style:none;max-height:520px;overflow:auto;padding-right:4px}
+.rank li{display:grid;grid-template-columns:34px 1fr 64px;gap:8px;align-items:center;padding:7px 8px;border-radius:10px;cursor:pointer;font-size:13px}
+.rank li:hover,.rank li.sel{background:rgba(255,255,255,.06)}
+.rank .uf{font-weight:800;font-size:12px;text-align:center;border-radius:6px;padding:3px 0;background:rgba(255,255,255,.07)}
+.rank .nm{display:flex;justify-content:space-between;gap:6px;color:var(--tx2);font-size:12px;margin-bottom:4px}
+.rank .bar{height:6px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+.rank .bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#22c55e,#86efac);transition:width .8s}
+.rank .pc{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.rank .done .pc{color:#86efac}
+.lead-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
 footer{margin-top:28px;color:var(--tx3);font-size:12px;line-height:1.6}
 footer a{color:var(--tx2)}
 .mono{font-family:"JetBrains Mono",monospace}
@@ -126,6 +158,32 @@ footer a{color:var(--tx2)}
       <div class="scope" id="scBZ"></div>
     </section>
   </div>
+
+  <div style="height:16px"></div>
+
+  <section class="card">
+    <h2>Mapa da apuração por estado <span class="tag" id="hMap">—</span></h2>
+    <div class="sub">Onde a contagem já terminou, onde está andando e onde ainda não começou. Toque ou passe o mouse num estado para ver os números. O ponto amarelo é Armação dos Búzios.</div>
+    <div class="tabs" id="mapTabs">
+      <button data-k="pst" class="on">Andamento da apuração</button>
+      <button data-k="lead">Quem lidera</button>
+    </div>
+    <div class="mapgrid">
+      <div class="mapbox">
+        <svg id="map" role="img" aria-label="Mapa do Brasil por estado"></svg>
+        <div class="tip" id="tip"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div>
+        <div class="counts">
+          <div><b id="cDone">—</b><small>terminaram</small></div>
+          <div><b id="cRun">—</b><small>apurando</small></div>
+          <div><b id="cZero">—</b><small>sem urnas</small></div>
+        </div>
+        <ol class="rank" id="rank"></ol>
+      </div>
+    </div>
+  </section>
 
   <div style="height:16px"></div>
 
@@ -168,7 +226,7 @@ footer a{color:var(--tx2)}
 const POLL_MS = 5000;
 const TSE = "https://resultados.tse.jus.br/";
 const ELE1 = "6257", ELE2 = "6258";
-const BUZIOS = { uf: "rj", cd: "58408", nome: "Armação dos Búzios" };
+const BUZIOS = { uf: "rj", cd: "58408", nome: "Armação dos Búzios", lat: -22.763, lon: -41.930 };
 const params = new URLSearchParams(location.search);
 const DEMO = params.get("demo") === "1";
 
@@ -240,7 +298,7 @@ async function getJSON(path) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const j = await res.json();
       route = r;
-      $("srcInfo").textContent = `via ${r === "proxy" ? "servidor (proxy)" : "TSE direto"} · ${path}`;
+      $("srcInfo").textContent = `Conexão atual: ${r === "proxy" ? "servidor (proxy)" : "TSE direto"}`;
       return j;
     } catch (err) { lastErr = err; }
   }
@@ -401,6 +459,116 @@ function tabs(id, set) {
 tabs("cmpTabs", (k) => cmpKey = k);
 tabs("evoTabs", (k) => evoKey = k);
 
+// ---------- Mapa por estado ----------
+const MAP = window.BR_UFS;
+const UFS = MAP ? Object.keys(MAP.ufs) : [];
+const SMALL = new Set(["df", "se", "al", "pb", "rn", "pe", "es", "rj"]);
+const states = {};       // uf -> último parse do 2º turno
+let mapMode = "pst", selUF = null;
+
+function mix(a, b, t) {
+  const h = (s) => [1, 3, 5].map((i) => parseInt(s.slice(i, i + 2), 16));
+  const [x, y] = [h(a), h(b)];
+  return "rgb(" + x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(",") + ")";
+}
+function ufColor(d) {
+  if (!d || d.pst == null || d.pst <= 0) return "#1f2937";
+  if (mapMode === "pst") return d.pst >= 100 ? "#16a34a" : mix("#334155", "#4ade80", Math.max(.08, d.pst / 100));
+  const L = d.cands.lula, F = d.cands.flavio;
+  if (!L || !F) return "#334155";
+  const m = L.pvap - F.pvap, t = Math.min(1, Math.abs(m) / 30);
+  return m === 0 ? "#64748b" : m > 0 ? mix("#3f2a2e", "#ef4444", .25 + .75 * t) : mix("#26304a", "#3b82f6", .25 + .75 * t);
+}
+function buildMap() {
+  if (!MAP) { $("map").outerHTML = '<p class="note">Não foi possível carregar o desenho do mapa.</p>'; return; }
+  const svg = $("map");
+  svg.setAttribute("viewBox", `0 0 ${MAP.w} ${MAP.h}`);
+  let html = "";
+  for (const uf of UFS) html += `<path data-uf="${uf}" d="${MAP.ufs[uf].d}"/>`;
+  for (const uf of UFS) {
+    const u = MAP.ufs[uf], sm = SMALL.has(uf);
+    html += `<text x="${u.x}" y="${u.y - (sm ? 0 : 4)}" text-anchor="middle" font-size="${sm ? 9 : 13}">${uf.toUpperCase()}</text>`;
+    if (!sm) html += `<text class="p" data-pst="${uf}" x="${u.x}" y="${u.y + 11}" text-anchor="middle" font-size="11">—</text>`;
+  }
+  const p = MAP.p, bx = (BUZIOS.lon * p.c - p.minx) * p.k, by = (-BUZIOS.lat - p.miny) * p.k;
+  html += `<g class="bz"><circle class="ring" cx="${bx}" cy="${by}" r="4"/><circle cx="${bx}" cy="${by}" r="4"/></g>`;
+  svg.innerHTML = html;
+  const tip = $("tip");
+  const show = (uf, ev) => {
+    const d = states[uf], n = MAP.ufs[uf].n;
+    const L = d && d.cands.lula, F = d && d.cands.flavio;
+    tip.innerHTML = `<b>${n}</b><br>` + (d
+      ? `Apuradas: <b>${fmtP(d.pst)}</b> (${fmtN(d.st)} de ${fmtN(d.ts)} seções)<br>
+         <span class="lead-dot" style="background:var(--lula)"></span>Lula ${fmtP(L && L.pvap)} · ${fmtN(L && L.vap)}<br>
+         <span class="lead-dot" style="background:var(--flavio)"></span>Flávio ${fmtP(F && F.pvap)} · ${fmtN(F && F.vap)}<br>
+         <span style="color:var(--tx3)">TSE: ${d.dg || "—"} ${d.hg || ""}</span>`
+      : `<span style="color:var(--tx3)">Sem dados ainda</span>`);
+    const box = svg.parentElement.getBoundingClientRect();
+    const x = Math.min(ev.clientX - box.left + 12, box.width - 200), y = ev.clientY - box.top + 12;
+    tip.style.left = Math.max(0, x) + "px"; tip.style.top = y + "px"; tip.classList.add("show");
+  };
+  svg.addEventListener("mousemove", (e) => { const uf = e.target.dataset && e.target.dataset.uf; uf ? show(uf, e) : tip.classList.remove("show"); });
+  svg.addEventListener("mouseleave", () => tip.classList.remove("show"));
+  svg.addEventListener("click", (e) => { const uf = e.target.dataset && e.target.dataset.uf; if (uf) { select(uf); show(uf, e); } });
+  $("rank").addEventListener("click", (e) => { const li = e.target.closest("li"); if (li) select(li.dataset.uf); });
+  $("mapTabs").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    [...$("mapTabs").children].forEach((x) => x.classList.toggle("on", x === b));
+    mapMode = b.dataset.k; renderMap();
+  });
+}
+function select(uf) {
+  selUF = selUF === uf ? null : uf;
+  document.querySelectorAll("#map path").forEach((p) => p.classList.toggle("sel", p.dataset.uf === selUF));
+  document.querySelectorAll("#rank li").forEach((li) => li.classList.toggle("sel", li.dataset.uf === selUF));
+}
+function renderMap() {
+  if (!MAP) return;
+  document.querySelectorAll("#map path").forEach((p) => p.setAttribute("fill", ufColor(states[p.dataset.uf])));
+  document.querySelectorAll("#map text[data-pst]").forEach((t) => {
+    const d = states[t.dataset.pst];
+    t.textContent = d && d.pst != null ? (d.pst >= 100 ? "✓ 100%" : fmtP(d.pst, 0)) : "—";
+  });
+  $("legend").innerHTML = mapMode === "pst"
+    ? `<span>0%</span><span class="ramp" style="background:linear-gradient(90deg,#334155,#4ade80)"></span><span>99%</span>
+       <span><i style="background:#16a34a"></i>100% (terminou)</span><span><i style="background:#1f2937"></i>nenhuma urna</span>`
+    : `<span><i style="background:#ef4444"></i>Lula à frente</span><span><i style="background:#3b82f6"></i>Flávio à frente</span>
+       <span>cor mais forte = vantagem maior</span><span><i style="background:#1f2937"></i>nenhuma urna</span>`;
+  const list = UFS.map((uf) => ({ uf, d: states[uf] })).sort((a, b) => ((b.d && b.d.pst) || 0) - ((a.d && a.d.pst) || 0) || a.uf.localeCompare(b.uf));
+  let done = 0, run = 0, zero = 0;
+  $("rank").innerHTML = list.map(({ uf, d }) => {
+    const pst = d && d.pst != null ? d.pst : null;
+    if (pst >= 100) done++; else if (pst > 0) run++; else zero++;
+    const L = d && d.cands.lula, F = d && d.cands.flavio;
+    const lead = pst > 0 && L && F ? (L.pvap > F.pvap ? "var(--lula)" : F.pvap > L.pvap ? "var(--flavio)" : "var(--tx3)") : "transparent";
+    const extra = pst >= 100 ? `terminou ${d.hg ? d.hg.slice(0, 5) : ""}` : pst > 0 ? `atualizado ${d.hg ? d.hg.slice(0, 5) : ""}` : "aguardando";
+    return `<li data-uf="${uf}" class="${pst >= 100 ? "done" : ""}${uf === selUF ? " sel" : ""}"><span class="uf">${uf.toUpperCase()}</span>
+      <div><div class="nm"><span><span class="lead-dot" style="background:${lead}"></span>${MAP.ufs[uf].n}</span><span>${extra}</span></div>
+      <div class="bar"><i style="width:${pst || 0}%"></i></div></div><span class="pc">${pst == null ? "—" : fmtP(pst, 1)}</span></li>`;
+  }).join("");
+  $("cDone").textContent = done; $("cRun").textContent = run; $("cZero").textContent = zero;
+  $("hMap").textContent = `${done} de ${UFS.length} estados com 100%`;
+}
+function demoState(uf) {
+  // Velocidade diferente por estado para a simulação mostrar onde começa e termina.
+  let h = 0; for (const ch of uf) h = (h * 31 + ch.charCodeAt(0)) % 997;
+  const delay = (h % 7) * 4, speed = 1.5 + (h % 5);
+  const pst = Math.max(0, Math.min(100, ((Date.now() - demo.t0) / 1000 - delay) * speed));
+  const l = 30 + (h % 40);
+  const j = demoScope("br");
+  j.s = { pst: pst.toFixed(2).replace(".", ","), st: String(Math.round(pst * 30)), ts: "3000" };
+  j.carg[0].agr[0].par[0].cand[0].pvap = String(l).replace(".", ",");
+  j.carg[0].agr[0].par[1].cand[0].pvap = String(100 - l).replace(".", ",");
+  return j;
+}
+async function tickStates() {
+  if (!MAP) return;
+  await Promise.allSettled(UFS.map(async (uf) => {
+    states[uf] = parse(DEMO ? demoState(uf) : await getJSON(fileFor(ELE2, uf, "")));
+  }));
+  renderMap();
+}
+
 // ---------- Ciclo ----------
 async function loadT1() {
   for (const [key, uf, cd] of [["br", "br", ""], ["bz", BUZIOS.uf, BUZIOS.cd]]) {
@@ -410,6 +578,7 @@ async function loadT1() {
 }
 async function tick() {
   let ok = 0; const errs = [];
+  const mapa = tickStates();
   for (const [key, uf, cd] of [["br", "br", ""], ["bz", BUZIOS.uf, BUZIOS.cd]]) {
     try {
       const d = parse(DEMO ? demoScope(key) : await getJSON(fileFor(ELE2, uf, cd)));
@@ -424,6 +593,7 @@ async function tick() {
   } else { state.errors = 0; be.classList.remove("show"); }
   $("dot").className = "dot" + (ok === 0 ? " err" : "");
   renderCharts();
+  await mapa;
   const br = state.t2.br, bz = state.t2.bz;
   if (br && bz && br.pst >= 100 && bz.pst >= 100) finish();
 }
@@ -453,6 +623,8 @@ $("pauseBtn").onclick = () => {
 };
 
 if (DEMO) $("bDemo").classList.add("show");
+buildMap();
+renderMap();
 renderCharts();
 loadT1();
 loop();
