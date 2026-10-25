@@ -1,7 +1,9 @@
 import os
 import re
 import glob
-from flask import Flask, request, jsonify, render_template, send_file
+import urllib.request
+import urllib.error
+from flask import Flask, request, jsonify, render_template, send_file, Response
 from dotenv import load_dotenv
 import PyPDF2
 
@@ -134,6 +136,40 @@ def perguntar():
         "resposta": resposta,
         "paginas": paginas,
         "palavras_busca": palavras
+    })
+
+
+# ── Apuração 2º turno 2026 (proxy para os arquivos oficiais do TSE) ──
+TSE_BASE = "https://resultados.tse.jus.br/"
+# Só os arquivos de presidente (c0001) do 1º (6257) e 2º (6258) turno de 2026
+TSE_PERMITIDOS = re.compile(
+    r"^oficial/ele2026/(6257|6258)/dados/[a-z]{2}/[a-z]{2}\d{0,5}-c0001-e00(6257|6258)-u\.json$"
+)
+
+
+@app.route("/eleicao")
+def eleicao():
+    return render_template("eleicao.html")
+
+
+@app.route("/api/tse/<path:caminho>")
+def proxy_tse(caminho):
+    if not TSE_PERMITIDOS.match(caminho):
+        return jsonify({"erro": "Caminho não permitido"}), 400
+    req = urllib.request.Request(TSE_BASE + caminho, headers={
+        "User-Agent": "Mozilla/5.0 (apuracao-buzios)",
+        "Accept": "application/json",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            corpo = resp.read()
+    except urllib.error.HTTPError as e:
+        return jsonify({"erro": f"TSE respondeu {e.code}"}), e.code
+    except Exception as e:
+        return jsonify({"erro": f"Falha ao acessar o TSE: {e}"}), 502
+    return Response(corpo, mimetype="application/json", headers={
+        # Cache curto na CDN: todos os visitantes compartilham a mesma leitura por ~4 s
+        "Cache-Control": "public, s-maxage=4, stale-while-revalidate=4",
     })
 
 

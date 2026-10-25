@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Apuração 2º Turno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="/static/chart.umd.min.js"></script>
+<script>window.Chart || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>')</script>
+<style>
+:root{
+  --bg:#0b0f17; --bg2:#111827; --card:rgba(255,255,255,.04); --line:rgba(255,255,255,.09);
+  --tx:#e8edf5; --tx2:#9aa6b8; --tx3:#6b7689;
+  --lula:#ef4444; --lula-soft:rgba(239,68,68,.16);
+  --flavio:#3b82f6; --flavio-soft:rgba(59,130,246,.16);
+  --ok:#22c55e; --warn:#f59e0b; --gold:#fbbf24;
+  --r:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;background:
+  radial-gradient(1200px 600px at 10% -10%,rgba(59,130,246,.12),transparent 60%),
+  radial-gradient(1000px 600px at 110% 0%,rgba(239,68,68,.10),transparent 60%),var(--bg)}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:24px}
+.brand h1{font-size:clamp(22px,3.2vw,32px);font-weight:800;letter-spacing:-.02em}
+.brand p{color:var(--tx2);font-size:14px;margin-top:4px}
+.live{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 8px 8px 16px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:pulse 1.6s infinite}
+.dot.off{background:var(--tx3);animation:none}.dot.err{background:var(--lula)}
+@keyframes pulse{70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.live span{font-size:13px;color:var(--tx2);font-variant-numeric:tabular-nums}
+.live button{background:rgba(255,255,255,.08);color:var(--tx);border:0;border-radius:999px;padding:7px 14px;font:600 12px Inter;cursor:pointer}
+.live button:hover{background:rgba(255,255,255,.14)}
+.banner{display:none;margin-bottom:16px;padding:12px 16px;border-radius:12px;font-size:14px;border:1px solid}
+.banner.show{display:block}
+.banner.warn{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3);color:#fcd34d}
+.banner.demo{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.35);color:#d8b4fe}
+.banner.done{background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.3);color:#86efac}
+.tabs{display:flex;gap:6px;margin:0 0 16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:5px;width:max-content;max-width:100%}
+.tabs button{border:0;background:transparent;color:var(--tx2);font:600 14px Inter;padding:9px 16px;border-radius:10px;cursor:pointer}
+.tabs button.on{background:rgba(255,255,255,.1);color:var(--tx)}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}
+@media (max-width:860px){.g2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;backdrop-filter:blur(6px);min-width:0}
+.card h2{font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.card .sub{color:var(--tx3);font-size:12px;margin-bottom:16px}
+.tag{font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--tx2);background:rgba(255,255,255,.06);padding:4px 9px;border-radius:999px;white-space:nowrap}
+.scope{display:grid;gap:18px}
+.prog{display:flex;align-items:center;gap:14px}
+.prog .bar{flex:1;height:8px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden}
+.prog .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#22c55e,#86efac);border-radius:99px;transition:width .8s ease}
+.prog b{font:700 15px Inter;font-variant-numeric:tabular-nums;min-width:74px;text-align:right}
+.prog small{color:var(--tx3);font-size:12px}
+.cands{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cand{position:relative;border-radius:14px;padding:16px;border:1px solid var(--line);overflow:hidden;transition:transform .3s}
+.cand.lula{background:linear-gradient(160deg,var(--lula-soft),transparent 70%)}
+.cand.flavio{background:linear-gradient(160deg,var(--flavio-soft),transparent 70%)}
+.cand.lead{border-color:rgba(251,191,36,.45)}
+.cand .top{display:flex;align-items:center;gap:12px;padding-right:78px}
+.av{position:relative;width:48px;height:48px;border-radius:50%;flex:none;display:grid;place-items:center;font:800 15px Inter;color:var(--tx);background:rgba(255,255,255,.08);border:2px solid var(--line);overflow:hidden}
+.cand.lula .av{border-color:var(--lula)}.cand.flavio .av{border-color:var(--flavio)}
+.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cand .nm{font-weight:700;font-size:14px;line-height:1.2}
+.cand .pt{color:var(--tx2);font-size:12px}
+.cand .pct{font-size:clamp(30px,5vw,42px);font-weight:800;letter-spacing:-.03em;margin-top:12px;font-variant-numeric:tabular-nums}
+.cand.lula .pct{color:#fca5a5}.cand.flavio .pct{color:#93c5fd}
+.cand .vt{color:var(--tx2);font-size:13px;font-variant-numeric:tabular-nums}
+.cand .badge{position:absolute;top:10px;right:10px;font:700 10px Inter;letter-spacing:.06em;padding:4px 8px;border-radius:99px;background:rgba(251,191,36,.15);color:var(--gold);display:none}
+.cand.lead .badge{display:block}
+.cand.eleito .badge{display:block;background:rgba(34,197,94,.18);color:#86efac}
+.split{height:14px;border-radius:99px;overflow:hidden;display:flex;background:rgba(255,255,255,.06);position:relative}
+.split i{display:block;height:100%;transition:width .8s ease}
+.split .l{background:var(--lula)}.split .f{background:var(--flavio)}
+.split:after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;background:rgba(255,255,255,.7);border-radius:2px}
+.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:520px){.meta{grid-template-columns:repeat(2,1fr)}.cands{grid-template-columns:1fr}.delta{grid-template-columns:1fr}}
+.meta div{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:10px}
+.meta small{display:block;color:var(--tx3);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.meta b{font-size:14px;font-variant-numeric:tabular-nums}
+.chart{position:relative;height:300px}
+.chart.tall{height:340px}
+.delta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.delta div{border-radius:12px;padding:12px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.delta small{color:var(--tx3);font-size:12px}
+.delta b{display:block;font-size:20px;font-variant-numeric:tabular-nums;margin-top:2px}
+.delta span{color:var(--tx2);font-size:12px}
+.up{color:#86efac}.down{color:#fca5a5}
+.hidden{display:none!important}
+.note{color:var(--tx3);font-size:12px;line-height:1.5;margin-top:12px}
+footer{margin-top:28px;color:var(--tx3);font-size:12px;line-height:1.6}
+footer a{color:var(--tx2)}
+.mono{font-family:"JetBrains Mono",monospace}
+.skeleton{color:var(--tx3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Eleições 2026 · Presidente · 2º Turno</h1>
+      <p>Apuração oficial do TSE — Brasil e Armação dos Búzios (RJ)</p>
+    </div>
+    <div class="live">
+      <div class="dot off" id="dot"></div>
+      <span id="liveTxt">Conectando…</span>
+      <button id="pauseBtn">Pausar</button>
+    </div>
+  </header>
+
+  <div class="banner demo" id="bDemo">Modo simulação (<span class="mono">?demo=1</span>): os números abaixo são fictícios, gerados só para demonstrar o painel.</div>
+  <div class="banner warn" id="bErr"></div>
+  <div class="banner done" id="bDone">Apuração encerrada (100% das seções totalizadas no Brasil e em Búzios). Atualização automática parada.</div>
+
+  <div class="grid g2">
+    <section class="card" id="cardBR">
+      <h2>Brasil <span class="tag" id="hBR">—</span></h2>
+      <div class="sub" id="sBR">Aguardando dados…</div>
+      <div class="scope" id="scBR"></div>
+    </section>
+    <section class="card" id="cardBZ">
+      <h2>Armação dos Búzios · RJ <span class="tag" id="hBZ">—</span></h2>
+      <div class="sub" id="sBZ">Aguardando dados…</div>
+      <div class="scope" id="scBZ"></div>
+    </section>
+  </div>
+
+  <div style="height:16px"></div>
+
+  <section class="card">
+    <h2>1º turno × 2º turno <span class="tag">% votos válidos</span></h2>
+    <div class="sub">Quanto cada candidato tinha no 1º turno (resultado final) e quanto tem agora no 2º turno (parcial).</div>
+    <div class="tabs" id="cmpTabs">
+      <button data-k="bz" class="on">Armação dos Búzios</button>
+      <button data-k="br">Brasil</button>
+    </div>
+    <div class="grid g2">
+      <div class="chart"><canvas id="cCmpPct"></canvas></div>
+      <div class="chart"><canvas id="cCmpVot"></canvas></div>
+    </div>
+    <div class="delta" id="deltaBox"></div>
+    <p class="note">No 1º turno havia outros candidatos; os votos deles foram redistribuídos (ou viraram branco/nulo/abstenção), por isso os percentuais de ambos tendem a subir no 2º turno. Enquanto a apuração não termina, a comparação é com uma parcial do 2º turno: a ordem de chegada das urnas não é aleatória e pode distorcer a leitura.</p>
+  </section>
+
+  <div style="height:16px"></div>
+
+  <section class="card">
+    <h2>Evolução da apuração <span class="tag">ao vivo</span></h2>
+    <div class="sub">% de votos válidos de cada candidato conforme as seções vão sendo totalizadas. A linha é registrada por este navegador enquanto a página fica aberta.</div>
+    <div class="tabs" id="evoTabs">
+      <button data-k="bz" class="on">Armação dos Búzios</button>
+      <button data-k="br">Brasil</button>
+    </div>
+    <div class="chart tall"><canvas id="cEvo"></canvas></div>
+  </section>
+
+  <footer>
+    Fonte: Tribunal Superior Eleitoral — <a href="https://resultados.tse.jus.br" target="_blank" rel="noopener">resultados.tse.jus.br</a>, arquivos oficiais de divulgação (eleição 6257 = 1º turno, 6258 = 2º turno; Búzios = município TSE 58408).
+    Atualização a cada 5 segundos até 100% das seções totalizadas. Percentuais de votos válidos exatamente como publicados pelo TSE.
+    <div class="mono" id="srcInfo" style="margin-top:6px"></div>
+  </footer>
+</div>
+
+<script>
+(() => {
+const POLL_MS = 5000;
+const TSE = "https://resultados.tse.jus.br/";
+const ELE1 = "6257", ELE2 = "6258";
+const BUZIOS = { uf: "rj", cd: "58408", nome: "Armação dos Búzios" };
+const params = new URLSearchParams(location.search);
+const DEMO = params.get("demo") === "1";
+
+// Resultado final do 1º turno, usado só se o arquivo do TSE não carregar.
+// Brasil: TSE br-c0001-e006257-u.json (05/10/2026 12:51:47, 100%).
+// Búzios: soma dos boletins de urna (pleito 3220), conferida com rj58408-c0001-e006257-u.json.
+const T1_FALLBACK = {
+  br: { pst: 100, cands: { lula: { vap: 53879538, pvap: 45.16 }, flavio: { vap: 56104503, pvap: 47.03 } } },
+  bz: { pst: 100, cands: { lula: { vap: 8225, pvap: 8225 / 27336 * 100 }, flavio: { vap: 17294, pvap: 17294 / 27336 * 100 } } },
+};
+
+const $ = (id) => document.getElementById(id);
+const fmtN = (n) => n == null || isNaN(n) ? "—" : Math.round(n).toLocaleString("pt-BR");
+const fmtP = (p, d = 2) => p == null || isNaN(p) ? "—" : p.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }) + "%";
+const num = (v) => { if (v == null || v === "") return null; const n = Number(String(v).trim().replace(/\./g, "").replace(",", ".")); return isFinite(n) ? n : null; };
+const pnum = (v) => { if (v == null || v === "") return null; const n = Number(String(v).trim().replace(",", ".")); return isFinite(n) ? n : null; };
+
+function lado(nome, sg) {
+  const n = String(nome || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+  if (n.includes("LULA")) return "lula";
+  if (n.includes("FLAVIO") || n.includes("BOLSONARO")) return "flavio";
+  if (sg === "PT") return "lula";
+  if (sg === "PL") return "flavio";
+  return null;
+}
+
+function fileFor(ele, uf, cd) {
+  const ab = uf + (cd || "");
+  return `oficial/ele2026/${ele}/dados/${uf}/${ab}-c0001-e${ele.padStart(6, "0")}-u.json`;
+}
+const photo = (ele, sq) => /^\d+$/.test(sq || "") ? `${TSE}oficial/ele2026/${ele}/fotos/br/${sq}.jpeg` : "";
+
+// Lê o arquivo unificado (EA20, -u.json) do TSE.
+function parse(json) {
+  const cands = {};
+  const cargo = json && json.carg && json.carg[0];
+  for (const agr of (cargo && cargo.agr) || []) for (const par of agr.par || []) for (const c of par.cand || []) {
+    const k = lado(c.nmu || c.nm, par.sg);
+    if (!k) continue;
+    cands[k] = {
+      nome: c.nmu || c.nm, partido: par.sg || "", n: String(c.n || ""), sq: String(c.sqcand || ""),
+      vap: num(c.vap), pvap: pnum(c.pvap),
+      eleito: /eleito/i.test(String(c.st || "")) && !/n[aã]o eleito/i.test(String(c.st || "")) || c.e === "s",
+    };
+  }
+  const s = json.s || {}, v = json.v || {}, e = json.e || {};
+  return {
+    dg: json.dg || "", hg: json.hg || "", and: json.and || "",
+    pst: pnum(s.pst), st: num(s.st), ts: num(s.ts),
+    validos: num(v.vv), brancos: num(v.vb), pbrancos: pnum(v.pvb), nulos: num(v.tvn), pnulos: pnum(v.ptvn),
+    abst: num(e.a), pabst: pnum(e.pa), eleitores: num(e.te),
+    cands,
+  };
+}
+
+// Proxy do próprio servidor primeiro (evita CORS/bloqueio); se falhar, direto no TSE.
+let route = location.protocol.startsWith("http") ? "proxy" : "direct";
+async function getJSON(path) {
+  const tries = route === "proxy" ? ["proxy", "direct"] : ["direct", "proxy"];
+  let lastErr;
+  for (const r of tries) {
+    if (r === "proxy" && !location.protocol.startsWith("http")) continue;
+    const url = r === "proxy" ? `/api/tse/${path}` : `${TSE}${path}?t=${Date.now()}`;
+    try {
+      const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 9000);
+      const res = await fetch(url, { cache: "no-store", signal: ctl.signal });
+      clearTimeout(to);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const j = await res.json();
+      route = r;
+      $("srcInfo").textContent = `via ${r === "proxy" ? "servidor (proxy)" : "TSE direto"} · ${path}`;
+      return j;
+    } catch (err) { lastErr = err; }
+  }
+  throw lastErr;
+}
+
+// ---------- Simulação (?demo=1) ----------
+const demo = { t0: Date.now() };
+function demoScope(key) {
+  const pst = Math.min(100, ((Date.now() - demo.t0) / 1000) * (key === "br" ? 1.6 : 3.2));
+  const seed = key === "br" ? { l: 49.4, f: 50.6, vv: 120e6 } : { l: 31.5, f: 68.5, vv: 28000 };
+  const drift = (100 - pst) / 100;
+  const lp = seed.l + (key === "br" ? -3 : 2) * drift + Math.sin(Date.now() / 7000) * 0.15 * drift;
+  const vv = seed.vv * pst / 100;
+  const mk = (n, nm, sg, p) => ({ n, nm, nmu: nm, sqcand: "", vap: String(Math.round(vv * p / 100)), pvap: p.toFixed(2).replace(".", ","), st: pst >= 100 ? (p > 50 ? "Eleito" : "Não eleito") : "" });
+  return { dg: new Date().toLocaleDateString("pt-BR"), hg: new Date().toLocaleTimeString("pt-BR"),
+    s: { pst: pst.toFixed(2).replace(".", ","), st: String(Math.round(pst * 10)), ts: "1000" },
+    v: { vv: String(Math.round(vv)), vb: String(Math.round(vv * .02)), pvb: "1,90", tvn: String(Math.round(vv * .03)), ptvn: "2,80" },
+    e: { a: String(Math.round(vv * .22)), pa: "20,00" },
+    carg: [{ agr: [{ par: [{ sg: "PT", cand: [mk("13", "LULA", "PT", lp)] }, { sg: "PL", cand: [mk("22", "FLAVIO BOLSONARO", "PL", 100 - lp)] }] }] }] };
+}
+
+// ---------- Estado ----------
+const state = { t1: { br: null, bz: null }, t2: { br: null, bz: null }, paused: false, done: false, timer: null, next: 0, errors: 0 };
+const HKEY = "apuracao-2026-t2-hist" + (DEMO ? "-demo" : "");
+let hist = { br: [], bz: [] };
+try { const h = JSON.parse(localStorage.getItem(HKEY) || "null"); if (h && h.br && h.bz) hist = h; } catch (_) {}
+if (DEMO) hist = { br: [], bz: [] };
+function pushHist(key, d) {
+  if (!d || d.pst == null || d.pst <= 0 || !d.cands.lula || !d.cands.flavio) return;
+  const arr = hist[key], last = arr[arr.length - 1];
+  if (last && last.x === d.pst) return;
+  arr.push({ x: d.pst, l: d.cands.lula.pvap, f: d.cands.flavio.pvap, h: d.hg });
+  arr.sort((a, b) => a.x - b.x);
+  try { localStorage.setItem(HKEY, JSON.stringify(hist)); } catch (_) {}
+}
+
+// ---------- Render dos cartões ----------
+function candCard(c, key, ele, leader) {
+  const nome = c ? c.nome : (key === "lula" ? "LULA" : "FLÁVIO BOLSONARO");
+  const cls = `cand ${key}${leader ? " lead" : ""}${c && c.eleito ? " eleito" : ""}`;
+  const ini = key === "lula" ? "L" : "FB";
+  const img = `<div class="av">${ini}${c && photo(ele, c.sq) ? `<img src="${photo(ele, c.sq)}" alt="" onerror="this.remove()">` : ""}</div>`;
+  return `<div class="${cls}"><span class="badge">${c && c.eleito ? "ELEITO" : "LIDERANDO"}</span>
+    <div class="top">${img}<div><div class="nm">${nome}</div><div class="pt">${c ? (c.partido + " · " + c.n) : (key === "lula" ? "PT · 13" : "PL · 22")}</div></div></div>
+    <div class="pct">${fmtP(c && c.pvap)}</div><div class="vt">${fmtN(c && c.vap)} votos</div></div>`;
+}
+function renderScope(key, d) {
+  const sc = $("sc" + key.toUpperCase()), hd = $("h" + key.toUpperCase()), sb = $("s" + key.toUpperCase());
+  if (!d) return;
+  const L = d.cands.lula, F = d.cands.flavio;
+  const started = d.pst != null && d.pst > 0;
+  const lead = started && L && F ? (L.pvap > F.pvap ? "lula" : F.pvap > L.pvap ? "flavio" : null) : null;
+  const lp = started && L ? L.pvap : 50, fp = started && F ? F.pvap : 50;
+  hd.textContent = started ? (d.pst >= 100 ? "Finalizada" : "Em apuração") : "Aguardando";
+  sb.textContent = d.dg ? `Última totalização do TSE: ${d.dg} às ${d.hg}` : "Aguardando primeira totalização";
+  sc.innerHTML = `
+    <div><div class="prog"><div class="bar"><i style="width:${d.pst || 0}%"></i></div><b>${fmtP(d.pst)}</b></div>
+      <small style="color:var(--tx3);font-size:12px">seções totalizadas: ${fmtN(d.st)} de ${fmtN(d.ts)}</small></div>
+    <div class="cands">${candCard(L, "lula", ELE2, lead === "lula")}${candCard(F, "flavio", ELE2, lead === "flavio")}</div>
+    <div class="split" title="Linha branca = 50%"><i class="l" style="width:${lp}%"></i><i class="f" style="width:${fp}%"></i></div>
+    <div class="meta">
+      <div><small>Válidos</small><b>${fmtN(d.validos)}</b></div>
+      <div><small>Brancos</small><b>${fmtP(d.pbrancos)}</b></div>
+      <div><small>Nulos</small><b>${fmtP(d.pnulos)}</b></div>
+      <div><small>Abstenção</small><b>${fmtP(d.pabst)}</b></div>
+    </div>`;
+}
+
+// ---------- Gráficos ----------
+Chart.defaults.color = "#9aa6b8";
+Chart.defaults.font.family = "Inter, system-ui, sans-serif";
+Chart.defaults.borderColor = "rgba(255,255,255,.07)";
+const C = { lula: "#ef4444", flavio: "#3b82f6", lulaS: "rgba(239,68,68,.35)", flavioS: "rgba(59,130,246,.35)" };
+let cmpKey = "bz", evoKey = "bz";
+
+const cmpPct = new Chart($("cCmpPct"), {
+  type: "bar",
+  data: { labels: ["Lula (PT)", "Flávio Bolsonaro (PL)"], datasets: [
+    { label: "1º turno", data: [0, 0], backgroundColor: [C.lulaS, C.flavioS], borderColor: [C.lula, C.flavio], borderWidth: 1.5, borderRadius: 8 },
+    { label: "2º turno", data: [0, 0], backgroundColor: [C.lula, C.flavio], borderRadius: 8 },
+  ] },
+  options: { maintainAspectRatio: false, animation: { duration: 600 },
+    plugins: { title: { display: true, text: "% dos votos válidos", color: "#e8edf5", font: { weight: 600 } },
+      legend: { labels: { usePointStyle: true, generateLabels: () => [
+        { text: "1º turno (claro)", fillStyle: "rgba(255,255,255,.25)", strokeStyle: "#fff", fontColor: "#9aa6b8", pointStyle: "rectRounded" },
+        { text: "2º turno (forte)", fillStyle: "#fff", strokeStyle: "#fff", fontColor: "#9aa6b8", pointStyle: "rectRounded" }] } },
+      tooltip: { callbacks: { label: (x) => `${x.dataset.label}: ${fmtP(x.raw)}` } } },
+    scales: { y: { min: 0, max: 100, ticks: { callback: (v) => v + "%" } }, x: { grid: { display: false } } } },
+});
+const cmpVot = new Chart($("cCmpVot"), {
+  type: "bar",
+  data: { labels: ["Lula (PT)", "Flávio Bolsonaro (PL)"], datasets: [
+    { label: "1º turno", data: [0, 0], backgroundColor: [C.lulaS, C.flavioS], borderColor: [C.lula, C.flavio], borderWidth: 1.5, borderRadius: 8 },
+    { label: "2º turno", data: [0, 0], backgroundColor: [C.lula, C.flavio], borderRadius: 8 },
+  ] },
+  options: { maintainAspectRatio: false, animation: { duration: 600 },
+    plugins: { title: { display: true, text: "Votos absolutos", color: "#e8edf5", font: { weight: 600 } }, legend: { display: false },
+      tooltip: { callbacks: { label: (x) => `${x.dataset.label}: ${fmtN(x.raw)} votos` } } },
+    scales: { y: { ticks: { callback: (v) => v >= 1e6 ? (v / 1e6).toLocaleString("pt-BR") + " mi" : v >= 1e3 ? (v / 1e3).toLocaleString("pt-BR") + " mil" : v } }, x: { grid: { display: false } } } },
+});
+const evo = new Chart($("cEvo"), {
+  type: "line",
+  data: { datasets: [
+    { label: "Lula (PT)", data: [], borderColor: C.lula, backgroundColor: "rgba(239,68,68,.12)", fill: false, tension: .3, pointRadius: 2, borderWidth: 2.5 },
+    { label: "Flávio Bolsonaro (PL)", data: [], borderColor: C.flavio, backgroundColor: "rgba(59,130,246,.12)", fill: false, tension: .3, pointRadius: 2, borderWidth: 2.5 },
+    { label: "Lula · 1º turno", data: [], borderColor: C.lulaS, borderDash: [6, 6], pointRadius: 0, borderWidth: 1.5 },
+    { label: "Flávio · 1º turno", data: [], borderColor: C.flavioS, borderDash: [6, 6], pointRadius: 0, borderWidth: 1.5 },
+    { label: "50%", data: [{ x: 0, y: 50 }, { x: 100, y: 50 }], borderColor: "rgba(255,255,255,.35)", borderDash: [2, 4], pointRadius: 0, borderWidth: 1 },
+  ] },
+  options: { maintainAspectRatio: false, animation: { duration: 400 }, parsing: false,
+    interaction: { mode: "nearest", intersect: false },
+    plugins: { legend: { labels: { usePointStyle: true, boxWidth: 8 } },
+      tooltip: { callbacks: { title: (i) => `${fmtP(i[0].raw.x)} das seções`, label: (x) => `${x.dataset.label}: ${fmtP(x.raw.y)}` } } },
+    scales: { x: { type: "linear", min: 0, max: 100, title: { display: true, text: "% de seções totalizadas" }, ticks: { callback: (v) => v + "%" } },
+      y: { title: { display: true, text: "% votos válidos" }, ticks: { callback: (v) => v + "%" }, suggestedMin: 20, suggestedMax: 80 } } },
+});
+
+function t1Of(key) {
+  const d = state.t1[key];
+  if (d && d.cands.lula && d.cands.flavio && d.pst >= 100) return d;
+  return T1_FALLBACK[key];
+}
+function renderCharts() {
+  const a = t1Of(cmpKey), b = state.t2[cmpKey];
+  const bl = b && b.pst > 0 ? b.cands.lula : null, bf = b && b.pst > 0 ? b.cands.flavio : null;
+  cmpPct.data.datasets[0].data = [a.cands.lula.pvap, a.cands.flavio.pvap];
+  cmpPct.data.datasets[1].data = [bl ? bl.pvap : 0, bf ? bf.pvap : 0];
+  cmpVot.data.datasets[0].data = [a.cands.lula.vap, a.cands.flavio.vap];
+  cmpVot.data.datasets[1].data = [bl ? bl.vap : 0, bf ? bf.vap : 0];
+  const parcial = b && b.pst != null && b.pst < 100;
+  cmpPct.data.datasets[1].label = cmpVot.data.datasets[1].label = parcial ? `2º turno (${fmtP(b.pst, 1)} apurado)` : "2º turno";
+  cmpPct.update(); cmpVot.update();
+
+  const row = (nm, k, cls) => {
+    const p1 = a.cands[k].pvap, v1 = a.cands[k].vap, c2 = k === "lula" ? bl : bf;
+    if (!c2) return `<div><small>${nm}</small><b class="skeleton">—</b><span>1º turno: ${fmtP(p1)} · ${fmtN(v1)} votos</span></div>`;
+    const dp = c2.pvap - p1, dv = c2.vap - v1;
+    return `<div><small>${nm}: variação em pontos percentuais</small><b class="${dp >= 0 ? "up" : "down"}">${dp >= 0 ? "+" : ""}${dp.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p.</b>
+      <span>${fmtP(p1)} → ${fmtP(c2.pvap)} · votos: ${fmtN(v1)} → ${fmtN(c2.vap)}${parcial ? " (parcial)" : ` (${dv >= 0 ? "+" : ""}${fmtN(dv)})`}</span></div>`;
+  };
+  $("deltaBox").innerHTML = row("Lula", "lula") + row("Flávio Bolsonaro", "flavio");
+
+  const h = hist[evoKey], t1 = t1Of(evoKey);
+  evo.data.datasets[0].data = h.map((p) => ({ x: p.x, y: p.l }));
+  evo.data.datasets[1].data = h.map((p) => ({ x: p.x, y: p.f }));
+  evo.data.datasets[2].data = [{ x: 0, y: t1.cands.lula.pvap }, { x: 100, y: t1.cands.lula.pvap }];
+  evo.data.datasets[3].data = [{ x: 0, y: t1.cands.flavio.pvap }, { x: 100, y: t1.cands.flavio.pvap }];
+  evo.update();
+}
+function tabs(id, set) {
+  $(id).addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    [...$(id).children].forEach((x) => x.classList.toggle("on", x === b));
+    set(b.dataset.k); renderCharts();
+  });
+}
+tabs("cmpTabs", (k) => cmpKey = k);
+tabs("evoTabs", (k) => evoKey = k);
+
+// ---------- Ciclo ----------
+async function loadT1() {
+  for (const [key, uf, cd] of [["br", "br", ""], ["bz", BUZIOS.uf, BUZIOS.cd]]) {
+    try { state.t1[key] = parse(await getJSON(fileFor(ELE1, uf, cd))); } catch (_) { /* usa fallback embutido */ }
+  }
+  renderCharts();
+}
+async function tick() {
+  let ok = 0; const errs = [];
+  for (const [key, uf, cd] of [["br", "br", ""], ["bz", BUZIOS.uf, BUZIOS.cd]]) {
+    try {
+      const d = parse(DEMO ? demoScope(key) : await getJSON(fileFor(ELE2, uf, cd)));
+      state.t2[key] = d; pushHist(key, d); renderScope(key, d); ok++;
+    } catch (err) { errs.push(`${key === "br" ? "Brasil" : "Búzios"}: ${err.message || err}`); }
+  }
+  const be = $("bErr");
+  if (errs.length) {
+    state.errors++;
+    be.textContent = `Não consegui ler o TSE agora (${errs.join("; ")}). Tentando de novo a cada 5 s. Antes das 17h (Brasília) os arquivos do 2º turno podem ainda não estar publicados.`;
+    be.classList.add("show");
+  } else { state.errors = 0; be.classList.remove("show"); }
+  $("dot").className = "dot" + (ok === 0 ? " err" : "");
+  renderCharts();
+  const br = state.t2.br, bz = state.t2.bz;
+  if (br && bz && br.pst >= 100 && bz.pst >= 100) finish();
+}
+function finish() {
+  state.done = true; clearTimeout(state.timer);
+  $("bDone").classList.add("show"); $("dot").className = "dot off";
+  $("liveTxt").textContent = "Apuração encerrada"; $("pauseBtn").classList.add("hidden");
+}
+async function loop() {
+  if (state.paused || state.done) return;
+  await tick();
+  if (state.done || state.paused) return;
+  state.next = Date.now() + POLL_MS;
+  state.timer = setTimeout(loop, POLL_MS);
+}
+setInterval(() => {
+  if (state.done) return;
+  if (state.paused) { $("liveTxt").textContent = "Pausado"; return; }
+  const s = Math.max(0, Math.ceil((state.next - Date.now()) / 1000));
+  $("liveTxt").textContent = state.next ? `Ao vivo · próxima em ${s}s` : "Conectando…";
+}, 250);
+$("pauseBtn").onclick = () => {
+  state.paused = !state.paused;
+  $("pauseBtn").textContent = state.paused ? "Retomar" : "Pausar";
+  $("dot").className = "dot" + (state.paused ? " off" : "");
+  if (!state.paused) { clearTimeout(state.timer); loop(); }
+};
+
+if (DEMO) $("bDemo").classList.add("show");
+renderCharts();
+loadT1();
+loop();
+})();
+</script>
+</body>
+</html>
